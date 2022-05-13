@@ -1,9 +1,11 @@
 import os
 import logging
 import pathlib
+import shutil
 import json
 import sqlite3
 import hashlib
+from fastapi import File, UploadFile, Body
 from fastapi import FastAPI, Form, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,24 +31,43 @@ def get_items_json():
     return items_json
 
 def get_hash_name(image):
-    image_name = image.split('.')[0]
+    image_name, image_ext = image.split('.')
     image_hashed = hashlib.sha256(image_name.encode()).hexdigest()
-    return image_hashed + '.jpg'
+    return '.'.join([image_hashed, image_ext])
+
+def save_image(image_hashed, image_file):
+    path = f'image/{image_hashed}'
+    with open(path, 'w+b') as f:
+        shutil.copyfileobj(image_file.file, f)
 
 @app.get("/")
 def root():
     return {"message": "Hello, world!"}
 
 @app.post("/items")
-def add_item(name: str = Form(...), category: str = Form(...), image: str = Form(...)):
+def add_item(
+        name: str = Body(...),
+        category: str = Body(...),
+        #image: str = Form(...),
+        image: UploadFile = File(...)):
     logger.info(f"Receive item: {name}")
-    image_hashed = get_hash_name(image)
+    image_hashed = get_hash_name(image.filename)
+    save_image(image_hashed, image)
     conn = sqlite3.connect(sqlite_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM category WHERE name = ?", (category, ))
+    cursor.execute(
+        "SELECT id " \
+        "FROM category " \
+        "WHERE name = ?",
+        (category, )
+    )
     res = cursor.fetchall()
     if len(res) == 0:
-        cursor.execute("INSERT INTO category(name) VALUES(?)", (category, ))
+        cursor.execute(
+            "INSERT INTO category(name)" \
+            "VALUES(?)",
+            (category, )
+        )
         conn.commit()
         cursor.execute("SELECT id FROM category WHERE name = ?", (category, ))
         res = cursor.fetchall()
@@ -59,7 +80,13 @@ def add_item(name: str = Form(...), category: str = Form(...), image: str = Form
 def get_item(item_id):
     conn = sqlite3.connect(sqlite_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT items.name, category.name AS category, items.image FROM items INNER JOIN category ON items.category_id = category.id WHERE items.id = ?", (item_id,))
+    cursor.execute(
+        "SELECT items.name, category.name AS category, items.image "\
+        "FROM items "\
+        "INNER JOIN category ON items.category_id = category.id "\
+        "WHERE items.id = ?",
+        (item_id,)
+    )
     sql_res = cursor.fetchall()
     conn.close()
     result_dict = dict((key, value) for key, value in zip(['name', 'category', 'image'], sql_res[0]))
@@ -69,7 +96,13 @@ def get_item(item_id):
 def search_items(keyword: str):
     conn = sqlite3.connect(sqlite_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT items.name, category.name FROM items INNER JOIN category ON items.category_id = category.id WHERE items.name LIKE ?" , ('%' + keyword + '%', ))
+    cursor.execute(
+        "SELECT items.name, category.name "\
+        "FROM items "\
+        "INNER JOIN category ON items.category_id = category.id "\
+        "WHERE items.name LIKE ?",
+        ('%' + keyword + '%', )
+    )
     sql_res = cursor.fetchall()
     conn.close()
     result_dict = {}
