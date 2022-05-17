@@ -25,14 +25,25 @@
 }
 
 .ItemList {
-  background-color: #222427;
+  background-color: #F99;
+  border-radius: 20px;
+  box-shadow: 0 35px 80px rgba(0, 0, 0, 0.5);
   min-height: 8vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: left;
   font-size: calc(10px + 1vmin);
   color: white;
+}
+
+.ItemList img {
+  width: 200px;
+  height: 200px;
+}
+
+.wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .App-link {

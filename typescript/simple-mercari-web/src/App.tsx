@@ -14,7 +14,7 @@ function App() {
       <div>
         <Listing/>
       </div>
-      <div>
+      <div className="wrapper">
         <ItemList/>
       </div>
     </div>

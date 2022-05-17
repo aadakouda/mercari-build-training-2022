@@ -6,19 +6,30 @@ export const Listing: React.FC<{}> = () => {
   const initialState = {
     name: "",
     category: "",
-    image: "",
+    image: undefined,
   };
-  const [values, setValues] = useState(initialState);
+  interface formData {
+    name: string
+    category: string
+    image: File | undefined
+  };
+  const [values, setValues] = useState<formData>(initialState);
   
   const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
       setValues({ ...values, [event.target.name]: event.target.value });
   };
+  const getImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files) return
+    const img: File = event.target.files[0];
+    setValues({ ...values, image: img});
+  };
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const data = new FormData()
-    data.append('name', values.name)
-    data.append('category', values.category)
-    data.append('image', values.image)
+    event.preventDefault();
+    if (!values.image) return
+    const data = new FormData();
+    data.append('name', values.name);
+    data.append('category', values.category);
+    data.append('image', values.image);
 
     fetch(server.concat('/items'), {
       method: 'POST',
@@ -39,7 +50,7 @@ export const Listing: React.FC<{}> = () => {
         <div>
             <input type='text' name='name' id='name' placeholder='name' onChange={onChange} required/>
             <input type='text' name='category' id='category' placeholder='category' onChange={onChange}/>
-            <input type='file' name='image' id='image' placeholder='image' onChange={onChange}/>
+            <input type='file' name='image' id='image' placeholder='image' onChange={getImage}/>
             <button type='submit'>List this item</button>
         </div>
       </form>
